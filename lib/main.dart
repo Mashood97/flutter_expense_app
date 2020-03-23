@@ -20,16 +20,22 @@ class MyApp extends StatelessWidget {
         accentColor: Colors.amber,
         fontFamily: 'QuickSand',
         appBarTheme: AppBarTheme(
-          textTheme: ThemeData.light().textTheme.copyWith(
-                title: TextStyle(
-                  fontFamily: 'OpenSans',
-                  fontWeight: FontWeight.bold,
-                  fontSize:
-                      20, // to calc font sizes we use : final textScaleFactor = mediaQuery.textScaleFactor
-                ),
-              ),
+          textTheme: ThemeData
+              .light()
+              .textTheme
+              .copyWith(
+            title: TextStyle(
+              fontFamily: 'OpenSans',
+              fontWeight: FontWeight.bold,
+              fontSize:
+              20, // to calc font sizes we use : final textScaleFactor = mediaQuery.textScaleFactor
+            ),
+          ),
         ),
-        textTheme: ThemeData.light().textTheme.copyWith(
+        textTheme: ThemeData
+            .light()
+            .textTheme
+            .copyWith(
             title: TextStyle(
               fontFamily: 'OpenSans',
               fontSize: 18.0,
@@ -75,6 +81,62 @@ class _MyHomePageState extends State<MyHomePage> {
     }).toList();
   }
 
+  List<Widget> isLandscapeMode(MediaQueryData mediaQuery, AppBar appBar,
+      Widget txListWidget) {
+    return [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text(
+            'Show Chart',
+            style: Theme
+                .of(context)
+                .textTheme
+                .title,
+          ),
+          Switch.adaptive(
+            activeColor: Theme
+                .of(context)
+                .accentColor,
+            value: _showChart,
+            onChanged: (val) {
+              setState(() {
+                _showChart = val;
+              });
+            },
+          )
+        ],
+      ),
+      _showChart
+          ? Container(
+        height: (mediaQuery.size.height -
+            appBar.preferredSize.height -
+            mediaQuery.padding.top) *
+            0.7,
+        child: Chart(
+          recentTransactions: _recentTransactions,
+        ),
+      )
+          : txListWidget
+    ];
+  }
+
+  List<Widget> isPotraitMode(MediaQueryData mediaQuery, AppBar appBar,
+      Widget txListWidget) {
+    return [
+      Container(
+        height: (mediaQuery.size.height -
+            appBar.preferredSize.height -
+            mediaQuery.padding.top) *
+            0.3,
+        child: Chart(
+          recentTransactions: _recentTransactions,
+        ),
+      ),
+      txListWidget
+    ];
+  }
+
   void _addNewTransaction(String txTitle, double txAmount, DateTime txDate) {
     final newTransaction = Transaction(
       title: txTitle,
@@ -107,36 +169,44 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  Widget _IOSAppBar() {
+    return CupertinoNavigationBar(
+      middle: Text('Flutter App'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          GestureDetector(
+            child: Icon(CupertinoIcons.add),
+            onTap: () => _addModalBottomSheet(context),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _AndroidAppBar() {
+    return AppBar(
+      title: Text('Flutter App'),
+      actions: <Widget>[
+        IconButton(
+          icon: Icon(Icons.add),
+          onPressed: () => _addModalBottomSheet(context),
+        )
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final isLandscape = mediaQuery.orientation == Orientation.landscape;
     final PreferredSizeWidget appBar = Platform.isIOS
-        ? CupertinoNavigationBar(
-            middle: Text('Flutter App'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                GestureDetector(
-                  child: Icon(CupertinoIcons.add),
-                  onTap: () => _addModalBottomSheet(context),
-                )
-              ],
-            ),
-          )
-        : AppBar(
-            title: Text('Flutter App'),
-            actions: <Widget>[
-              IconButton(
-                icon: Icon(Icons.add),
-                onPressed: () => _addModalBottomSheet(context),
-              )
-            ],
-          );
+        ? _IOSAppBar()
+        : _AndroidAppBar();
     final txListWidget = Container(
       height: (mediaQuery.size.height -
-              appBar.preferredSize.height -
-              mediaQuery.padding.top) *
+          appBar.preferredSize.height -
+          mediaQuery.padding.top) *
           0.7,
       child: TransactionList(
         transactions: _transactionList,
@@ -149,68 +219,30 @@ class _MyHomePageState extends State<MyHomePage> {
           // mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            if (isLandscape)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text(
-                    'Show Chart',
-                    style: Theme.of(context).textTheme.title,
-                  ),
-                  Switch.adaptive(
-                    activeColor: Theme.of(context).accentColor,
-                    value: _showChart,
-                    onChanged: (val) {
-                      setState(() {
-                        _showChart = val;
-                      });
-                    },
-                  )
-                ],
-              ),
+            if (isLandscape) ...isLandscapeMode(
+                mediaQuery, appBar, txListWidget),
             if (!isLandscape)
-              Container(
-                height: (mediaQuery.size.height -
-                        appBar.preferredSize.height -
-                        mediaQuery.padding.top) *
-                    0.3,
-                child: Chart(
-                  recentTransactions: _recentTransactions,
-                ),
-              ),
-            if (!isLandscape) txListWidget,
-            if (isLandscape)
-              _showChart
-                  ? Container(
-                      height: (mediaQuery.size.height -
-                              appBar.preferredSize.height -
-                              mediaQuery.padding.top) *
-                          0.7,
-                      child: Chart(
-                        recentTransactions: _recentTransactions,
-                      ),
-                    )
-                  : txListWidget
+              ...isPotraitMode(mediaQuery, appBar, txListWidget),
           ],
         ),
       ),
     );
     return Platform.isIOS
         ? CupertinoPageScaffold(
-            child: pageBody,
-            navigationBar: appBar,
-          )
+      child: pageBody,
+      navigationBar: appBar,
+    )
         : Scaffold(
-            appBar: appBar,
-            body: pageBody,
-            floatingActionButtonLocation:
-                FloatingActionButtonLocation.centerFloat,
-            floatingActionButton: Platform.isIOS
-                ? Container()
-                : FloatingActionButton(
-                    child: Icon(Icons.add),
-                    onPressed: () => _addModalBottomSheet(context),
-                  ),
-          );
+      appBar: appBar,
+      body: pageBody,
+      floatingActionButtonLocation:
+      FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Platform.isIOS
+          ? Container()
+          : FloatingActionButton(
+        child: Icon(Icons.add),
+        onPressed: () => _addModalBottomSheet(context),
+      ),
+    );
   }
 }
